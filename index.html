@@ -171,7 +171,7 @@ function render(){
     else{s.className="locked";s.textContent="🔒 ??? — "+(r.at-S.xp)+" more pokes";}
     host.appendChild(s);
   });
-  const bs=document.createElement('section');if(IS_BDAY){bs.id='bday';bs.innerHTML=builders.bday();}else{bs.className='locked';bs.textContent='🔒 Something wakes on February 2nd…';}host.appendChild(bs);
+  const bs=document.createElement('section');if(IS_BDAY){bs.id='bday';bs.innerHTML=builders.bday();}else{bs.className='locked';bs.textContent='🔒 Something awakens February 2nd…';}host.appendChild(bs);
   $("tbc").hidden=S.xp<ROOMS[ROOMS.length-1].at;
   // interactions
   host.querySelectorAll(".card").forEach(c=>{
