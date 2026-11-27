@@ -114,6 +114,9 @@ const IS=PREVIEW||(NOW.getMonth()+1===CONFIG.month&&NOW.getDate()===CONFIG.day);
 let S={xp:0,seen:{},ora:false,wish:{}};
 try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+/* Gift-opening sound: put a clip named gift.mp3 next to this file. If it isn't there, nothing plays. */
+const giftSnd=new Audio("gift.mp3");giftSnd.preload="auto";
+const playGift=()=>{try{giftSnd.currentTime=0;const p=giftSnd.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}};
 
 function burst(x,y,n){const c=["#ff3d8b","#b44dff","#ffd36b","#5ee7ff","#ff2a5f"];
   for(let i=0;i<n;i++){const p=document.createElement("i");p.className="cf";p.style.left=x+"px";p.style.top=y+"px";p.style.background=c[i%c.length];
@@ -123,7 +126,7 @@ function burst(x,y,n){const c=["#ff3d8b","#b44dff","#ffd36b","#5ee7ff","#ff2a5f"
 function openBox(quiet){
   $("wrap").classList.add("open");$("wrap").onclick=null;$("tap").hidden=true;
   if(!S.seen["bg"+BK]){S.seen["bg"+BK]=1;save();}
-  if(!quiet){burst(innerWidth/2,innerHeight/3,60);document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),1100);}
+  if(!quiet){playGift();burst(innerWidth/2,innerHeight/3,60);document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),1100);}
   $("msg").textContent=CONFIG.message;$("msg").hidden=false;
   setTimeout(startHunt,quiet?300:1800);
 }
