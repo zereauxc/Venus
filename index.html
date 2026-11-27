@@ -61,7 +61,7 @@ button.b2{background:#333}
 .find:hover{opacity:1}
 .pl{font:inherit;color:#fff;background:var(--vio);border:0;padding:6px 16px;cursor:pointer;margin:6px 4px 0}
 #mgrid{display:grid;gap:8px;margin:10px 0}
-.mc{width:100%;aspect-ratio:3/4;font:inherit;font-size:26px;line-height:1;background:var(--panel);border:2px solid var(--line);color:#e8c26a;padding:0;cursor:pointer}
+.mc{width:100%;min-width:0;box-sizing:border-box;overflow:hidden;aspect-ratio:3/4;font:inherit;font-size:clamp(18px,6vw,26px);line-height:1;background:var(--panel);border:2px solid var(--line);color:#e8c26a;padding:0;cursor:pointer}
 .mc.up{border-color:#e8c26a}.mc.ok{border-color:var(--vio);opacity:.75}
 /* ===== Christmas theme (turns on Dec 25-31, or with #christmas on the URL) ===== */
 body.xmas{--bg:#050e09;--panel:#0a150e;--line:#5c1a27;--vio:#2f9e63;--blood:#c8102e;--gold:#f0d78c;--ink:#f2efe6;--dim:#8fa597;background:radial-gradient(ellipse at 50% -10%,#14301f 0%,var(--bg) 55%) fixed,var(--bg)}
@@ -255,7 +255,7 @@ function dealG(){const f=MG.slice(0,Math.min(3+G.L,MG.length));G.deck=f.concat(f
   for(let i=G.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]];}
   G.st=G.deck.map(()=>0);G.open=[];G.lock=false;G.moves=0;G.found=0;G.won=false;}
 function drawGame(){const g=$("mgrid");if(!g)return;if(!G.deck.length)dealG();
-  g.style.gridTemplateColumns="repeat("+(G.deck.length>12?5:4)+",1fr)";
+  g.style.gridTemplateColumns="repeat("+(G.deck.length>12?5:4)+",minmax(0,1fr))";
   g.innerHTML=G.deck.map((c,k)=>`<button class="mc ${G.st[k]===1?"up":G.st[k]===2?"ok":""}" data-k="${k}">${G.st[k]?c.v:"?"}</button>`).join("");
   $("mgi").textContent=G.won?"Level "+(G.L+1)+" cleared!":"Level "+(G.L+1)+" · "+G.deck.length/2+" pairs · moves "+G.moves;
   $("mnext").hidden=!G.won;}
