@@ -56,6 +56,13 @@ button.b2{background:#333}
 #bdb h1{font-size:clamp(28px,8vw,48px);text-shadow:0 0 24px var(--blood);margin:10px 0}
 #bdb p{color:var(--dim)}
 .door{display:inline-block;background:var(--blood);color:#fff;padding:6px 26px;text-decoration:none;font-size:28px;box-shadow:0 0 22px var(--blood)}
+#app{position:relative}
+.find{position:absolute;z-index:3;background:none;border:0;padding:6px;font-size:20px;line-height:1;opacity:.28;cursor:pointer;transform:translateX(-50%)}
+.find:hover{opacity:1}
+.pl{font:inherit;color:#fff;background:var(--vio);border:0;padding:6px 16px;cursor:pointer;margin:6px 4px 0}
+#mgrid{display:grid;gap:8px;margin:10px 0}
+.mc{width:100%;aspect-ratio:3/4;font:inherit;font-size:26px;line-height:1;background:var(--panel);border:2px solid var(--line);color:#e8c26a;padding:0;cursor:pointer}
+.mc.up{border-color:#e8c26a}.mc.ok{border-color:var(--vio);opacity:.75}
 /* ===== Christmas theme (turns on Dec 25-31, or with #christmas on the URL) ===== */
 body.xmas{--bg:#050e09;--panel:#0a150e;--line:#5c1a27;--vio:#2f9e63;--blood:#c8102e;--gold:#f0d78c;--ink:#f2efe6;--dim:#8fa597;background:radial-gradient(ellipse at 50% -10%,#14301f 0%,var(--bg) 55%) fixed,var(--bg)}
 body.xmas #sigil{overflow:visible}
@@ -83,6 +90,7 @@ body.xmas #fog{background:radial-gradient(ellipse at 20% 100%,#ffffff1c,transpar
 </svg>
 </div>
 <div class="hint" id="hint"></div>
+<div class="hint" id="fcount" hidden></div>
 <div id="rooms"></div>
 <div class="big" id="tbc" hidden>To Be Continued ⟶</div>
 <button class="reset" id="reset">reset progress</button>
@@ -98,6 +106,16 @@ const CONFIG = {
     banner:"Today the whole site is yours.",
     message:"Today is your day and I am at your command, choose any item from your carts and it is yours.",
     prizes:["A surprise gift from Hiram"]},
+  wa:"12424321512",   // your WhatsApp: coupons and prizes message you here
+  titles:["Stranger","Acquaintance","Friend","Good Friend","Close Friend","Best Friend","Partner in Crime","Bonded for Life"],   // one per bond level (0-7)
+  daily:{start:"2026-11-27"},   // daily bonus starts this day; each new day begins at 6am
+  coupons:[   // The Coupon Room (250 XP) - placeholders, change these
+    {name:"Dinner and drinks on me",text:"Dinner and drinks, my treat."},
+    {name:"Movie night",text:"You pick the movie."}],
+  prize:{title:"Custom drawing of you and your Pokémon team",text:"You reached 500 XP. A custom drawing by a local artist.",unlock:"2027-02-02"},   // 500 XP prize, locked until her birthday
+  finale:{title:"Bonded for Life",unlock:"2027-01-01",   // 1000 XP, locked until Jan 1
+    paragraphs:["(Your long final letter goes here.)"],
+    prize:{title:"A hand-painted Zereaux piece, designed with you",text:"You reached 1000 XP. You pick the piece, the theme and the colors, and I paint it just for you."}},
   xmas:{on:true,gifts:true,from:25,to:31,   // on:true = Christmas theme Dec 25-31; gifts:true shows the "Under the Tree" card (needs gifts.html in the repo)
     banner:"I wrapped up a little world just for you. Poke it.",
     sub:"a gift, wrapped in snow. poke it."},
@@ -141,7 +159,10 @@ const ROOMS = [
   {at:5,  id:"stand",  name:"Stand Card"},
   {at:15, id:"dex",    name:"The Friend-dex"},
   {at:30, id:"memes",  name:"Meme Vault"},
-  {at:50, id:"letter", name:"A Letter"}
+  {at:50, id:"letter", name:"A Letter"},
+  {at:250, id:"coupons", name:"The Coupon Room"},
+  {at:500, id:"prize", name:"500 XP Prize"},
+  {at:1000, id:"finale", name:"Bonded for Life"}
 ];
 /* ============================================================ */
 const $=id=>document.getElementById(id);
@@ -161,7 +182,11 @@ const builders={
     `<h2 style="margin-top:14px">Abilities</h2>`+CONFIG.stand.abilities.map(a=>S.xp>=a.at?`<div class="meme"><b>${esc(a.name)}</b> <span>♪ ${esc(a.song)}</span><br>${esc(a.text)}</div>`:`<div class="meme" style="opacity:.5">🔒 ??? — ${a.at-S.xp} more XP</div>`).join(""),
   dex:()=>`<h2>The Friend-dex</h2><div class="dex">`+CONFIG.dex.map((d,i)=>`<div class="card off" data-i="${i}"><b>${esc(d[0])}</b> ???<small>tap to register</small></div>`).join("")+`</div>`,
   memes:()=>`<h2>Meme Vault</h2>`+CONFIG.memes.map((m,i)=>`<div class="meme" data-m="${i}"><b>${esc(m[0])}</b><br><span class="tr">tap to reveal</span><div hidden>${esc(m[1])}</div></div>`).join(""),
-  letter:()=>`<h2>For ${esc(CONFIG.name)}</h2><div class="letter">`+CONFIG.letter.map(p=>`<p>${esc(p)}</p>`).join("")+`<p>— ${esc(CONFIG.from)}</p></div>`
+  letter:()=>`<h2>For ${esc(CONFIG.name)}</h2><div class="letter">`+CONFIG.letter.map(p=>`<p>${esc(p)}</p>`).join("")+`<p>— ${esc(CONFIG.from)}</p></div>`,
+  coupons:()=>`<h2>The Coupon Room</h2>`+CONFIG.coupons.map((c,i)=>(c.unlock&&!PREVIEW&&fmtD(new Date())<c.unlock)?`<div class="meme" style="opacity:.5;cursor:default">🔒 ??? — opens on your birthday</div>`:`<div class="meme" style="cursor:default"><b>${esc(c.name)}</b><br>${esc(c.text)}<br><button class="pl" data-wa="${esc("Coupon redeemed: "+c.name+" - "+c.text)}" data-k="cp${i}">${S.seen["cp"+i]?"Requested ✓ (send again)":"Redeem"}</button></div>`).join(""),
+  prize:()=>(CONFIG.prize.unlock&&!PREVIEW&&fmtD(new Date())<CONFIG.prize.unlock)?`<h2>500 XP Prize</h2><div class="meme" style="opacity:.5;cursor:default">🔒 ??? — opens on your birthday</div>`:`<h2>500 XP Prize</h2><div class="meme" style="cursor:default"><b>${esc(CONFIG.prize.title)}</b><br>${esc(CONFIG.prize.text)}<br><button class="pl" data-wa="${esc("I reached 500 XP! Claiming: "+CONFIG.prize.title)}" data-k="pz">${S.seen.pz?"Claimed ✓":"Claim it"}</button></div>`,
+  finale:()=>(CONFIG.finale.unlock&&!PREVIEW&&fmtD(new Date())<CONFIG.finale.unlock)?`<h2>Final room</h2><div class="meme" style="opacity:.5;cursor:default">🔒 ??? — opens on January 1st</div>`:`<h2>${esc(CONFIG.finale.title)}</h2><div class="letter">`+CONFIG.finale.paragraphs.map(p=>`<p>${esc(p)}</p>`).join("")+`</div><div class="meme" style="cursor:default"><b>${esc(CONFIG.finale.prize.title)}</b><br>${esc(CONFIG.finale.prize.text)}<br><button class="pl" data-wa="${esc("I reached 1000 XP! Claiming: "+CONFIG.finale.prize.title)}" data-k="fz">${S.seen.fz?"Claimed ✓":"Claim it"}</button></div>`,
+  arcade:()=>`<h2>Memory Arcade</h2><p style="text-align:center" id="mgi"></p><div id="mgrid"></div><p style="text-align:center"><button class="pl" id="mnext" hidden>Next level</button></p>`
 };
 
 function floater(x,y,t){const f=document.createElement("div");f.className="float";f.textContent=t;f.style.left=x+"px";f.style.top=y+"px";document.body.appendChild(f);setTimeout(()=>f.remove(),1000);}
@@ -169,21 +194,24 @@ function floater(x,y,t){const f=document.createElement("div");f.className="float
 function render(){
   const next=ROOMS.find(r=>S.xp<r.at);
   const lvl=ROOMS.filter(r=>S.xp>=r.at).length;
-  $("lv").textContent="BOND LV "+lvl;
+  $("lv").innerHTML="BOND LV "+lvl+"<br><small>"+esc((CONFIG.titles||[])[(lvl===7&&CONFIG.finale.unlock&&!PREVIEW&&fmtD(new Date())<CONFIG.finale.unlock)?6:lvl]||"")+"</small>";
   $("xp").textContent=S.xp+" XP";
   const prev=lvl?ROOMS[lvl-1].at:0;
   lily(Math.min(1,S.xp/ROOMS[ROOMS.length-1].at));
   $("hint").textContent=next?(S.xp===0?"poke the sigil":(next.at-S.xp)+" more until something wakes up…"):"everything is awake. for now.";
   const host=$("rooms");host.innerHTML="";
   if(IS_XMAS&&CONFIG.xmas.gifts){const xs=document.createElement('section');xs.id='xmas';xs.innerHTML='<h2>Under the Tree</h2><p style="text-align:center">Something is waiting under the tree.</p><p style="text-align:center"><a class="door" href="gifts.html">Go look</a></p>';host.appendChild(xs);}
+  if(CONFIG.daily&&dk()>=CONFIG.daily.start){const d=dayInfo(),ds=document.createElement("section");ds.id="daily";ds.innerHTML=d.claimed?`<h2>Daily bonus</h2><p style="text-align:center">Claimed ✓ Come back after 6am for +${Math.min(20+5*d.streak,50)} XP</p>`:`<h2>Daily bonus</h2><p style="text-align:center">Day ${d.streak} · +${d.xp} XP</p><p style="text-align:center"><button class="pl" data-claim>Claim</button></p>`;host.appendChild(ds);}
   ROOMS.forEach(r=>{
     const s=document.createElement("section");
     if(S.xp>=r.at){s.innerHTML=builders[r.id]();s.id=r.id;}
-    else{s.className="locked";s.textContent="🔒 ??? — "+(r.at-S.xp)+" more pokes";}
+    else{s.className="locked";s.textContent="🔒 ??? — "+(r.at-S.xp)+" more XP";}
     host.appendChild(s);
   });
+  if(S.xp>=30){const gs=document.createElement('section');gs.id='arcade';gs.innerHTML=builders.arcade();host.appendChild(gs);}
   const bs=document.createElement('section');if(IS_BDAY){bs.id='bday';bs.innerHTML=builders.bday();}else{bs.className='locked';bs.textContent='🔒 Something wakes on February 2nd…';}host.appendChild(bs);
   $("tbc").hidden=S.xp<ROOMS[ROOMS.length-1].at;
+  drawGame();updFinds();
   // interactions
   host.querySelectorAll(".card").forEach(c=>{
     const i=c.dataset.i;
@@ -207,6 +235,42 @@ function add(n,el,ev){
   render();
   if(after>before){const room=ROOMS[after-1];setTimeout(()=>{const e=$(room.id);if(e)e.scrollIntoView({behavior:"smooth",block:"center"});},150);}
 }
+
+/* ===== daily bonus, hidden finds, memory arcade ===== */
+const fmtD=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const dk=()=>fmtD(new Date(Date.now()-6*36e5));   // a new "day" starts at 6am
+const dBefore=k=>{const d=new Date(k+"T12:00:00");d.setDate(d.getDate()-1);return fmtD(d);};
+function dayInfo(){const k=dk(),dl=S.dl||{},claimed=dl.last===k,streak=claimed?(dl.streak||1):(dl.last===dBefore(k)?(dl.streak||0)+1:1);return{k,claimed,streak,xp:Math.min(20+5*(streak-1),50)};}
+function claimDaily(){const d=dayInfo();if(d.claimed)return;S.dl={last:d.k,streak:d.streak};add(d.xp);}
+
+const FINDS=[["🦇",8,6],["🕯️",91,14],["🌙",5,27],["💀",93,38],["🥀",12,49],["⚡",88,58],["👻",6,70],["🔮",90,79],["🌹",14,88],["🕷️",84,95]];
+function updFinds(){const n=FINDS.filter((f,i)=>S.seen["f"+i]).length,e=$("fcount");e.hidden=!n;e.textContent="hidden finds: "+n+"/"+FINDS.length;}
+function mkFind(f,key,xp){const b=document.createElement("button");b.className="find";b.textContent=f[0];b.setAttribute("aria-label","something hidden");b.style.left=f[1]+"%";b.style.top=f[2]+"%";b.onclick=e=>{S.seen[key]=1;b.remove();add(xp,null,e);};$("app").appendChild(b);}
+FINDS.forEach((f,i)=>{if(!S.seen["f"+i])mkFind(f,"f"+i,5);});
+if(!S.seen.fr)mkFind(["✦",50,99],"fr",25);   // the rare one
+
+const MG=["ゴ","👻","🦇","🌙","🌹","🕯️","💀","🔮","⚡","🎴"];
+let G={L:S.mg||0,deck:[],st:[],open:[],lock:false,moves:0,found:0,won:false};
+function dealG(){const f=MG.slice(0,Math.min(3+G.L,MG.length));G.deck=f.concat(f).map(v=>({v}));
+  for(let i=G.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]];}
+  G.st=G.deck.map(()=>0);G.open=[];G.lock=false;G.moves=0;G.found=0;G.won=false;}
+function drawGame(){const g=$("mgrid");if(!g)return;if(!G.deck.length)dealG();
+  g.style.gridTemplateColumns="repeat("+(G.deck.length>12?5:4)+",1fr)";
+  g.innerHTML=G.deck.map((c,k)=>`<button class="mc ${G.st[k]===1?"up":G.st[k]===2?"ok":""}" data-k="${k}">${G.st[k]?c.v:"?"}</button>`).join("");
+  $("mgi").textContent=G.won?"Level "+(G.L+1)+" cleared!":"Level "+(G.L+1)+" · "+G.deck.length/2+" pairs · moves "+G.moves;
+  $("mnext").hidden=!G.won;}
+function flipG(k){if(G.lock||G.st[k]||G.won)return;G.st[k]=1;G.open.push(k);drawGame();if(G.open.length<2)return;
+  G.moves++;G.lock=true;const a=G.open[0],b=G.open[1];
+  if(G.deck[a].v===G.deck[b].v){G.st[a]=G.st[b]=2;G.found++;G.open=[];G.lock=false;
+    if(G.found===G.deck.length/2){G.won=true;S.mg=G.L+1;save();if(G.L<8)add(Math.min(5+G.L,12));else drawGame();}else drawGame();}
+  else setTimeout(()=>{G.st[a]=G.st[b]=0;G.open=[];G.lock=false;drawGame();},Math.max(350,800-70*G.L));}
+
+$("rooms").addEventListener("click",e=>{const t=e.target;
+  if(t.closest("[data-claim]")){claimDaily();return;}
+  const w=t.closest("[data-wa]");if(w){S.seen[w.dataset.k]=1;save();window.open("https://wa.me/"+CONFIG.wa+"?text="+encodeURIComponent(w.dataset.wa),"_blank");render();return;}
+  const m=t.closest(".mc");if(m){flipG(+m.dataset.k);return;}
+  if(t.closest("#mnext")){G.L=S.mg||0;dealG();drawGame();}
+});
 
 const PET='M0 0C-7-8-6-22 0-30C6-22 7-8 0 0Z';
 function lily(p){const a=[-78,-46,-16,16,46,78];let s=`<path d='M30 40Q28 52 30 62' stroke='#2f6b46' stroke-width='2' fill='none'/><path d='M30 54Q18 50 14 42Q24 44 30 54Z' fill='#2f6b46'/><path d='M30 52Q42 48 46 40Q36 42 30 52Z' fill='#2f6b46'/><g transform='translate(30 40)'>`;
