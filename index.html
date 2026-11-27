@@ -56,6 +56,13 @@ button.b2{background:#333}
 #bdb h1{font-size:clamp(28px,8vw,48px);text-shadow:0 0 24px var(--blood);margin:10px 0}
 #bdb p{color:var(--dim)}
 .door{display:inline-block;background:var(--blood);color:#fff;padding:6px 26px;text-decoration:none;font-size:28px;box-shadow:0 0 22px var(--blood)}
+/* ===== Christmas theme (turns on Dec 25-31, or with #christmas on the URL) ===== */
+body.xmas{--bg:#050e09;--panel:#0a150e;--line:#5c1a27;--vio:#2f9e63;--blood:#c8102e;--gold:#f0d78c;--ink:#f2efe6;--dim:#8fa597;background:radial-gradient(ellipse at 50% -10%,#14301f 0%,var(--bg) 55%) fixed,var(--bg)}
+body.xmas #sigil{overflow:visible}
+body.xmas #sigil circle[stroke="#a855f7"]{stroke:#2f9e63}
+body.xmas #fog{background:radial-gradient(ellipse at 20% 100%,#ffffff1c,transparent 60%),radial-gradient(ellipse at 70% 100%,#2f9e631c,transparent 60%)}
+.snow{position:fixed;top:-24px;color:#fff;opacity:.75;pointer-events:none;z-index:2;user-select:none;animation:snow linear infinite}
+@keyframes snow{to{transform:translate(var(--sx),calc(100vh + 48px))}}
 </style>
 </head>
 <body>
@@ -91,6 +98,9 @@ const CONFIG = {
     banner:"Today the whole site is yours.",
     message:"Today is your day and I am at your command, choose any item from your carts and it is yours.",
     prizes:["A surprise gift from Hiram"]},
+  xmas:{on:true,gifts:true,from:25,to:31,   // on:true = Christmas theme Dec 25-31; gifts:true shows the "Under the Tree" card (needs gifts.html in the repo)
+    banner:"I wrapped up a little world just for you. Poke it.",
+    sub:"a gift, wrapped in snow. poke it."},
   encounterMon: "Venus",           // "A wild ___ appeared!"
   stand: {
     name: "「Venus in Furs」",
@@ -165,13 +175,14 @@ function render(){
   lily(Math.min(1,S.xp/ROOMS[ROOMS.length-1].at));
   $("hint").textContent=next?(S.xp===0?"poke the sigil":(next.at-S.xp)+" more until something wakes up…"):"everything is awake. for now.";
   const host=$("rooms");host.innerHTML="";
+  if(IS_XMAS&&CONFIG.xmas.gifts){const xs=document.createElement('section');xs.id='xmas';xs.innerHTML='<h2>Under the Tree</h2><p style="text-align:center">Something is waiting under the tree.</p><p style="text-align:center"><a class="door" href="gifts.html">Go look</a></p>';host.appendChild(xs);}
   ROOMS.forEach(r=>{
     const s=document.createElement("section");
     if(S.xp>=r.at){s.innerHTML=builders[r.id]();s.id=r.id;}
     else{s.className="locked";s.textContent="🔒 ??? — "+(r.at-S.xp)+" more pokes";}
     host.appendChild(s);
   });
-  const bs=document.createElement('section');if(IS_BDAY){bs.id='bday';bs.innerHTML=builders.bday();}else{bs.className='locked';bs.textContent='🔒 Something awakens February 2nd…';}host.appendChild(bs);
+  const bs=document.createElement('section');if(IS_BDAY){bs.id='bday';bs.innerHTML=builders.bday();}else{bs.className='locked';bs.textContent='🔒 Something wakes on February 2nd…';}host.appendChild(bs);
   $("tbc").hidden=S.xp<ROOMS[ROOMS.length-1].at;
   // interactions
   host.querySelectorAll(".card").forEach(c=>{
@@ -206,9 +217,10 @@ function buildWreath(){let s=`<circle r='108' fill='none' stroke='#5b1a36' strok
 for(let i=0;i<10;i++){const a=i*36;s+=`<g transform='rotate(${a}) translate(0 -108) scale(.7)'>`+[-60,-30,0,30,60].map((d,k)=>`<path d='${PET}' transform='rotate(${d})' fill='${k%2?'#f3e9ff':'#d9c8f0'}' stroke='#8b3fd9' stroke-width='1.5'/>`).join('')+`</g>`;
 s+=`<g transform='rotate(${a+18}) translate(0 -108)'><path d='M-4 0L0 -7L4 0' fill='none' stroke='#be123c' stroke-width='1.5'/></g>`;}
 $('wreath').innerHTML=s;}
-function petals(x,y,n){for(let i=0;i<4+n;i++){const p=document.createElement('div');p.className='petal';p.style.left=x+'px';p.style.top=y+'px';p.style.setProperty('--dx',(Math.random()*120-60)+'px');p.style.setProperty('--r',(Math.random()*540-270)+'deg');p.style.background=i%2?'#be123c':'#12060d';p.style.border='1px solid #be123c';document.body.appendChild(p);setTimeout(()=>p.remove(),1400);}}
+function petals(x,y,n){for(let i=0;i<4+n;i++){const p=document.createElement('div');p.className='petal';p.style.left=x+'px';p.style.top=y+'px';p.style.setProperty('--dx',(Math.random()*120-60)+'px');p.style.setProperty('--r',(Math.random()*540-270)+'deg');const X=document.body.classList.contains('xmas');p.style.background=X?(i%2?'#c8102e':'#1f7a4d'):(i%2?'#be123c':'#12060d');p.style.border=X?'1px solid #f0d78c':'1px solid #be123c';document.body.appendChild(p);setTimeout(()=>p.remove(),1400);}}
 const NOW=new Date(),PREVIEW=location.hash==='#birthday',BK=PREVIEW?'test':String(NOW.getFullYear());
 const IS_BDAY=PREVIEW||(NOW.getMonth()+1===CONFIG.bday.month&&NOW.getDate()===CONFIG.bday.day);
+const XPREV=location.hash==='#christmas',IS_XMAS=CONFIG.xmas.on&&(XPREV||(NOW.getMonth()===11&&NOW.getDate()>=CONFIG.xmas.from&&NOW.getDate()<=CONFIG.xmas.to));
 function bdayBanner(){const o=document.createElement('div');o.id='bdb';o.innerHTML=`<div><div style='font-size:34px;color:var(--blood)'>ゴゴゴ</div><h1>Happy Birthday, ${esc(CONFIG.name)}</h1><p>${esc(CONFIG.bday.banner)}</p><button id='bdgo'>Enter</button></div>`;document.body.appendChild(o);
  $('bdgo').onclick=()=>{o.remove();petals(innerWidth/2,innerHeight/3,10);for(let i=0;i<12;i++)setTimeout(()=>floater(Math.random()*innerWidth,innerHeight*.3+Math.random()*innerHeight*.4,'ゴ'),i*70);document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),1600);};}
 function bEncounter(){if(!IS_BDAY||S.seen['bp'+BK]||document.querySelector('.toast')||$('bdb'))return;let balls=3;const t=document.createElement('div');t.className='toast';
@@ -216,7 +228,20 @@ function bEncounter(){if(!IS_BDAY||S.seen['bp'+BK]||document.querySelector('.toa
  const throwIt=()=>{if(Math.random()<.25){const pz=CONFIG.bday.prizes[Math.floor(Math.random()*CONFIG.bday.prizes.length)];S.seen['bp'+BK]=pz;save();t.innerHTML=`Gotcha! ${esc(CONFIG.encounterMon)} was caught!<br>Prize: <b>${esc(pz)}</b>`;petals(innerWidth/2,innerHeight/2,10);render();setTimeout(()=>t.remove(),7000);return;}
   balls--;if(balls<=0){t.innerHTML=`Oh no! ${esc(CONFIG.encounterMon)} got away…`;setTimeout(()=>t.remove(),2500);return;}set('It broke free!');};
  document.body.appendChild(t);set(`A wild <b>${esc(CONFIG.encounterMon)}</b> appeared!<br>It looks really hard to catch…`);setTimeout(()=>t.remove(),25000);}
-buildWreath();
+function buildXmas(){
+ document.body.classList.add('xmas');
+ let s=`<circle r='108' fill='none' stroke='#1f6b3a' stroke-width='3'/><circle r='108' fill='none' stroke='#f0d78c' stroke-width='1' stroke-dasharray='2 9'/>`;
+ for(let i=0;i<12;i++){const a=i*30;
+  s+=`<g transform='rotate(${a}) translate(0 -108) scale(.8)'>`+[-58,58].map(d=>`<path d='${PET}' transform='rotate(${d})' fill='#1f7a4d' stroke='#0f3d24' stroke-width='1.5'/>`).join('')+`</g>`;
+  if(i%2===0)s+=`<g transform='rotate(${a+15}) translate(0 -108)'>`+[[-4,0],[4,0],[0,-5]].map(p=>`<circle cx='${p[0]}' cy='${p[1]}' r='3.4' fill='#c8102e' stroke='#7a0a1c'/>`).join('')+`</g>`;}
+ $('wreath').innerHTML=s;
+ $('sigil').insertAdjacentHTML('beforeend',`<g transform='rotate(-12 94 22)'><path d='M50 20C56 -20 98 -36 142 -28C120 -12 130 6 140 20Z' fill='#c8102e' stroke='#7a0a1c' stroke-width='2'/><rect x='42' y='12' width='104' height='20' rx='10' fill='#f4f1ea'/><circle cx='142' cy='-28' r='11' fill='#f4f1ea'/></g>`);
+}
+function snow(){if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+ for(let i=0;i<34;i++){const f=document.createElement('div');f.className='snow';f.textContent=i%2?'❅':'❆';f.style.left=(Math.random()*100)+'vw';f.style.fontSize=(10+Math.random()*14)+'px';f.style.animationDuration=(9+Math.random()*9)+'s';f.style.animationDelay=(-Math.random()*18)+'s';f.style.setProperty('--sx',(Math.random()*90-45)+'px');document.body.appendChild(f);}}
+function xmasBanner(){const o=document.createElement('div');o.id='bdb';o.innerHTML=`<div><div style='font-size:34px;color:var(--blood)'>❄ ✦ ❄</div><h1>Merry Christmas, ${esc(CONFIG.name)}</h1><p>${esc(CONFIG.xmas.banner)}</p><button id='xmgo'>Enter</button></div>`;document.body.appendChild(o);
+ $('xmgo').onclick=()=>{o.remove();S.seen['xm'+NOW.getFullYear()]=1;save();petals(innerWidth/2,innerHeight/3,10);};}
+if(IS_XMAS){buildXmas();snow();$('sub').textContent=CONFIG.xmas.sub;if(XPREV||!S.seen['xm'+NOW.getFullYear()])xmasBanner();}else buildWreath();
 if(IS_BDAY){bdayBanner();}
 /* ORA sound: put a short clip named ora.mp3 next to index.html. If the file isn't there, nothing plays. */
 const oraSnd=new Audio("ora.mp3");oraSnd.preload="auto";

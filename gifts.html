@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Under the Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050e09;--ink:#f2efe6;--dim:#8fa597;--grn:#2f9e63;--red:#c8102e;--gold:#f0d78c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:"VT323",ui-monospace,Menlo,monospace;font-size:22px;line-height:1.35;background:radial-gradient(ellipse at 50% -10%,#14301f 0%,var(--bg) 60%) fixed,var(--bg);overflow-x:hidden}
+main{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:24px 18px 80px;text-align:center}
+h1,h2{font-family:"Cinzel",Georgia,serif;margin:10px 0;color:var(--gold);text-shadow:0 0 18px var(--red)}
+h1{font-size:clamp(28px,8vw,42px)}h2{font-size:22px}
+p{margin:8px 0}.dim{color:var(--dim)}
+#tree{width:min(92vw,380px);display:block;margin:6px auto;overflow:visible}
+.box{cursor:pointer;transform-box:fill-box;transform-origin:center bottom;transition:filter .5s}
+.box.lit{filter:drop-shadow(0 0 9px var(--gold))}
+.box.shk{animation:bx .45s}
+#star{cursor:pointer;transform-box:fill-box;transform-origin:center;animation:pu 1.4s ease-in-out infinite;filter:drop-shadow(0 0 8px var(--gold))}
+.lt{animation:tw 1.6s ease-in-out infinite}
+#grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
+.c{width:100%;aspect-ratio:3/4;font:inherit;font-size:30px;line-height:1;background:#0f2a1a;border:2px solid #1f7a4d;color:var(--gold);padding:0;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.c.up{background:#143a24;border-color:var(--gold)}
+.c.ok{background:#3a1018;border-color:var(--red);box-shadow:0 0 12px #c8102e88}
+#game{border:2px solid var(--grn);background:#0a150ecc;padding:14px;margin:20px 0;animation:ri .6s both}
+.msg{font-size:26px;color:#fff;text-shadow:0 0 12px var(--red)}
+button.pl{font:inherit;color:#fff;background:var(--grn);border:0;padding:4px 14px;cursor:pointer;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(92vw,420px);background:#000;border:2px solid var(--gold);padding:12px;z-index:30}
+a{color:var(--gold)}.back{display:inline-block;margin-top:24px;font-size:18px;color:var(--dim)}
+.snow{position:fixed;top:-24px;color:#fff;opacity:.75;pointer-events:none;z-index:2;user-select:none;animation:sn linear infinite}
+.cf{position:fixed;width:9px;height:14px;pointer-events:none;z-index:40;border-radius:2px;animation:cf 1.7s ease-out forwards}
+@keyframes sn{to{transform:translate(var(--sx),calc(100vh + 48px))}}
+@keyframes tw{50%{opacity:.2}}
+@keyframes pu{50%{transform:scale(1.25)}}
+@keyframes bx{25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+@keyframes ri{from{opacity:0;transform:translateY(14px)}}
+@keyframes cf{to{opacity:0;transform:translate(var(--dx),calc(var(--dy) + 260px)) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){#star,.lt,.box.shk{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <section id="sealed" hidden>
+    <h1>Not yet…</h1>
+    <p class="dim">Something wakes on Christmas. Come back then.</p>
+    <a class="back" href="index.html">← Back</a>
+  </section>
+  <section id="live" hidden>
+    <h1>Under the Tree</h1>
+    <p class="dim" id="sub"></p>
+    <svg id="tree" viewBox="0 0 300 310" aria-label="A Christmas tree with five wrapped gifts">
+      <rect x="135" y="258" width="30" height="30" fill="#4a2c17"/>
+      <polygon points="150,40 215,130 85,130" fill="#1f7a4d" stroke="#0f3d24" stroke-width="2"/>
+      <polygon points="150,85 235,190 65,190" fill="#1f7a4d" stroke="#0f3d24" stroke-width="2"/>
+      <polygon points="150,140 255,262 45,262" fill="#1f7a4d" stroke="#0f3d24" stroke-width="2"/>
+      <g id="lights"></g>
+      <polygon id="star" role="button" aria-label="Sparkling star" points="150,12 156,26 171,27 160,37 163,52 150,44 137,52 140,37 129,27 144,26" fill="#f0d78c" stroke="#fff3c4" stroke-width="1.5"/>
+      <ellipse cx="150" cy="302" rx="146" ry="10" fill="#dfe9e2" opacity=".85"/>
+      <g id="boxes"></g>
+    </svg>
+    <p id="hint" class="dim">the star on top is sparkling…</p>
+    <div id="game" hidden>
+      <h2>✦ Surprise level ✦</h2>
+      <p class="dim">Match the pairs. Every match lights up a gift.</p>
+      <div id="grid"></div>
+      <p id="mv" class="dim"></p>
+      <p id="winmsg" class="msg" hidden></p>
+      <button class="pl" id="again" hidden>Play again</button>
+    </div>
+    <a class="back" href="index.html">← Back</a>
+  </section>
+</main>
+<div id="toast" hidden></div>
+<script>
+const CONFIG={
+  from:25,to:31,                 // page opens Dec 25 through Dec 31
+  sub:"five gifts, wrapped and waiting.",
+  peek:"No peeking. This one is wrapped for later.",
+  win:"You found every pair. Merry Christmas, Venus.",
+  faces:["ゴ","👻","🦇","🎄","🌙"]  // 5 pairs, one per gift
+};
+const $=id=>document.getElementById(id);
+const KEY="bond-v1",N=new Date(),PRE=location.hash==="#christmas",BK=PRE?"test":String(N.getFullYear());
+const IS=PRE||(N.getMonth()===11&&N.getDate()>=CONFIG.from&&N.getDate()<=CONFIG.to);
+let S={xp:0,seen:{},ora:false};
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+const cleared=()=>!!(S.seen&&S.seen["xg"+BK]);
+
+function burst(x,y,n){const c=["#c8102e","#2f9e63","#f0d78c","#ffffff"];
+  for(let i=0;i<n;i++){const p=document.createElement("i");p.className="cf";p.style.left=x+"px";p.style.top=y+"px";p.style.background=c[i%c.length];
+    p.style.setProperty("--dx",(Math.random()*500-250)+"px");p.style.setProperty("--dy",(Math.random()*400-120)+"px");p.style.setProperty("--r",(Math.random()*720-360)+"deg");
+    document.body.appendChild(p);setTimeout(()=>p.remove(),1800);}}
+function snow(){if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+  for(let i=0;i<34;i++){const f=document.createElement("div");f.className="snow";f.textContent=i%2?"❅":"❆";f.style.left=(Math.random()*100)+"vw";f.style.fontSize=(10+Math.random()*14)+"px";f.style.animationDuration=(9+Math.random()*9)+"s";f.style.animationDelay=(-Math.random()*18)+"s";f.style.setProperty("--sx",(Math.random()*90-45)+"px");document.body.appendChild(f);}}
+let tt=null;
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2200);}
+
+/* tree lights + the five gifts */
+const LP=[[150,70],[130,108],[172,114],[110,150],[150,160],[192,156],[90,210],[128,222],[170,214],[212,226],[150,246]],LC=["#c8102e","#f0d78c","#ffffff","#5ee7ff"];
+$("lights").innerHTML=LP.map((p,i)=>`<circle class="lt" cx="${p[0]}" cy="${p[1]}" r="4" fill="${LC[i%4]}" style="animation-delay:${(i*.27).toFixed(2)}s"/>`).join("");
+const BX=[[20,36,"#c8102e","#f0d78c"],[76,28,"#2f9e63","#f0d78c"],[128,40,"#f0d78c","#c8102e"],[184,30,"#6b2fb0","#f0d78c"],[240,34,"#e8e4da","#c8102e"]];
+$("boxes").innerHTML=BX.map((b,i)=>{const x=b[0],h=b[1],y=300-h,w=44;
+  return `<g class="box" data-i="${i}"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${b[2]}" stroke="#00000055"/><rect x="${x+w/2-4}" y="${y}" width="8" height="${h}" fill="${b[3]}"/><rect x="${x}" y="${y+h/2-4}" width="${w}" height="8" fill="${b[3]}"/><circle cx="${x+w/2-6}" cy="${y-3}" r="6" fill="none" stroke="${b[3]}" stroke-width="3"/><circle cx="${x+w/2+6}" cy="${y-3}" r="6" fill="none" stroke="${b[3]}" stroke-width="3"/></g>`;}).join("");
+const boxEl=i=>document.querySelector('.box[data-i="'+i+'"]');
+document.querySelectorAll(".box").forEach(g=>g.onclick=()=>{g.classList.remove("shk");void g.getBoundingClientRect();g.classList.add("shk");toast(CONFIG.peek);});
+const light=i=>{const g=boxEl(i);if(g)g.classList.add("lit");};
+
+/* surprise level: matching game */
+let deck=[],st=[],open=[],lock=false,moves=0,found=0;
+function deal(){
+  const f=CONFIG.faces;deck=f.concat(f).map(v=>({v,p:f.indexOf(v)}));
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  st=deck.map(()=>0);open=[];lock=false;moves=0;found=0;
+  $("winmsg").hidden=true;$("again").hidden=true;draw();
+}
+function draw(){
+  $("grid").innerHTML=deck.map((c,k)=>`<button class="c ${st[k]===1?"up":st[k]===2?"ok":""}" data-k="${k}" aria-label="card">${st[k]?c.v:"?"}</button>`).join("");
+  $("mv").textContent="moves: "+moves+"   pairs: "+found+"/"+CONFIG.faces.length;
+}
+function flip(k){
+  if(lock||st[k])return;
+  st[k]=1;open.push(k);draw();
+  if(open.length<2)return;
+  moves++;lock=true;const a=open[0],b=open[1];
+  if(deck[a].p===deck[b].p){
+    st[a]=st[b]=2;found++;open=[];lock=false;light(deck[a].p);draw();
+    if(found===CONFIG.faces.length)win();
+  }else setTimeout(()=>{st[a]=st[b]=0;open=[];lock=false;draw();},800);
+}
+function win(){
+  S.seen["xg"+BK]=1;save();
+  $("winmsg").textContent=CONFIG.win;$("winmsg").hidden=false;$("again").hidden=false;
+  burst(innerWidth/2,innerHeight/2,80);
+}
+$("grid").onclick=e=>{const b=e.target.closest(".c");if(b)flip(+b.dataset.k);};
+$("again").onclick=deal;
+$("star").onclick=()=>{
+  $("hint").hidden=true;$("game").hidden=false;
+  const r=$("star").getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,30);
+  if(!deck.length)deal();
+  setTimeout(()=>$("game").scrollIntoView({behavior:"smooth",block:"center"}),150);
+};
+
+if(!IS){$("sealed").hidden=false;}
+else{
+  $("live").hidden=false;$("sub").textContent=CONFIG.sub;snow();
+  if(cleared())for(let i=0;i<BX.length;i++)light(i);
+}
+</script>
+</body>
+</html>
